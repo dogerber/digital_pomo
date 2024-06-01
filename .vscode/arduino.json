@@ -3,5 +3,5 @@
     "board": "esp32:esp32:lilygo_t_display_s3",
     "port": "COM3",
     "output": "../build",
-    "sketch": "working examples\\lv_demos\\lv_demos.ino"
+    "sketch": "working examples\\lv_countdown_2\\lv_countdown_2.ino"
 }
