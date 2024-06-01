@@ -5,12 +5,12 @@
 #endif
 
 /* Please make sure your touch IC model. */
-#define TOUCH_MODULES_CST_MUTUAL
+// #define TOUCH_MODULES_CST_MUTUAL
 // #define TOUCH_MODULES_CST_SELF
 
 #if defined(TOUCH_MODULES_CST_SELF) || defined(TOUCH_MODULES_CST_SELF)
-// #include "TouchLib.h"
-#define TOUCH_READ_FROM_INTERRNUPT
+#include "TouchLib.h"
+// #define TOUCH_READ_FROM_INTERRNUPT
 #endif
 
 /* The product now has two screens, and the initialization code needs a small change in the new version. The LCD_MODULE_CMD_1 is used to define the
@@ -26,33 +26,6 @@
 #include "esp_lcd_panel_vendor.h"
 #include "pin_config.h"
 #include "lv_demo_widgets.h"
-
-#include <TouchDrvCSTXXX.hpp>
-#define PIN_LCD_BL 38
-#define PIN_LCD_D0 39
-#define PIN_LCD_D1 40
-#define PIN_LCD_D2 41
-#define PIN_LCD_D3 42
-#define PIN_LCD_D4 45
-#define PIN_LCD_D5 46
-#define PIN_LCD_D6 47
-#define PIN_LCD_D7 48
-#define PIN_POWER_ON 15
-#define PIN_LCD_RES 5
-#define PIN_LCD_CS 6
-#define PIN_LCD_DC 7
-#define PIN_LCD_WR 8
-#define PIN_LCD_RD 9
-#define PIN_BUTTON_1 0
-#define PIN_BUTTON_2 14
-#define PIN_BAT_VOLT 4
-#define BOARD_I2C_SCL 17
-#define BOARD_I2C_SDA 18
-#define BOARD_TOUCH_IRQ 16
-#define BOARD_TOUCH_RST 21
-
-TouchDrvCSTXXX touch;
-int16_t x[5], y[5];
 
 esp_lcd_panel_io_handle_t io_handle = NULL;
 static lv_disp_draw_buf_t disp_buf; // contains internal graphic buffer(s) called draw buffer(s)
@@ -115,28 +88,27 @@ static void example_lvgl_flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_
     esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
 }
 
-// #if defined(TOUCH_MODULES_CST_SELF) || defined(TOUCH_MODULES_CST_SELF)
+#if defined(TOUCH_MODULES_CST_SELF) || defined(TOUCH_MODULES_CST_SELF)
 static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
-    /* #if defined(TOUCH_READ_FROM_INTERRNUPT)
-        if (get_int_signal)
-        {
-            get_int_signal = false;
-            touch.read();
-    #else
-        if (touch.read())
-        {
-    #endif */
-    if (touch.getPoint(x, y, touch.getSupportTouchPoint()))
+#if defined(TOUCH_READ_FROM_INTERRNUPT)
+    if (get_int_signal)
     {
-        data->point.x = *x;
-        data->point.y = *y;
+        get_int_signal = false;
+        touch.read();
+#else
+    if (touch.read())
+    {
+#endif
+        TP_Point t = touch.getPoint(0);
+        data->point.x = t.x;
+        data->point.y = t.y;
         data->state = LV_INDEV_STATE_PR;
     }
     else
         data->state = LV_INDEV_STATE_REL;
 }
-// #endif
+#endif
 
 void setup()
 {
@@ -253,36 +225,6 @@ void setup()
         { get_int_signal = true; }, FALLING);
 #endif
 #endif
-
-    // Initialize capacitive touch
-    touch.setPins(BOARD_TOUCH_RST, BOARD_TOUCH_IRQ);
-
-    if (!touch.begin(Wire, CST328_SLAVE_ADDRESS, BOARD_I2C_SDA, BOARD_I2C_SCL))
-    {
-        Serial.println("Failed init CST328 Device!");
-        if (!touch.begin(Wire, CST816_SLAVE_ADDRESS, BOARD_I2C_SDA, BOARD_I2C_SCL))
-        {
-            Serial.println("Failed init CST816 Device!");
-            while (1)
-            {
-                Serial.println("Not find touch device!");
-                delay(1000);
-            }
-        }
-    }
-
-    // fix orientation
-    touch.setMaxCoordinates(320, 170);
-    touch.setMirrorXY(true, false);
-    touch.setSwapXY(true);
-
-    // link
-    static lv_indev_drv_t indev_drv;
-    lv_indev_drv_init(&indev_drv);
-    indev_drv.type = LV_INDEV_TYPE_POINTER;
-    indev_drv.read_cb = lv_touchpad_read;
-    lv_indev_drv_register(&indev_drv);
-    is_initialized_lvgl = true;
 
     lv_demo_widgets();
 }
