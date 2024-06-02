@@ -17,6 +17,14 @@
 
 #define COUNTDOWN_DEFAULT_SECONDS 12
 
+typedef enum
+{
+    PROGRESS_BAR,
+    LAST_VISUALISATION_MODE
+} visualisation_mode;
+
+visualisation_mode visualisation_mode_active = PROGRESS_BAR;
+
 TouchDrvCSTXXX touch;
 int16_t x[5], y[5];
 
@@ -30,8 +38,11 @@ lv_obj_t *time_label;
 lv_obj_t *start_button;
 lv_obj_t *set_button;
 
+// visualisation objects
+lv_obj_t *lv_visualisation_object;
+
 int countdown_seconds = 10;
-int countdown_starttime_seconds;
+int countdown_starttime_seconds = countdown_seconds;
 bool countdown_running = false;
 
 typedef struct
@@ -112,6 +123,8 @@ void update_time(lv_timer_t *timer)
     char buf[64];
     sprintf(buf, "%02d:%02d:%02d", hours, minutes, seconds);
     lv_label_set_text(time_label, buf);
+
+    update_visualisation();
 }
 
 void start_button_event_handler(lv_event_t *e)
@@ -137,7 +150,7 @@ void create_countdown_screen()
 
     time_label = lv_label_create(scr);
     lv_obj_align(time_label, LV_ALIGN_CENTER, 0, -20);
-    // lv_obj_set_style_text_font(time_label, LV_FONT_MONTSERRAT_20, LV_STATE_DEFAULT); // Set the font size
+    // broken: lv_obj_set_style_text_font(time_label, &lv_font_montserrat_18, LV_STATE_DEFAULT); // Set the font size
 
     set_button = lv_btn_create(scr);
     lv_obj_align(set_button, LV_ALIGN_CENTER, -60, 60);
@@ -152,6 +165,31 @@ void create_countdown_screen()
     lv_obj_add_event_cb(start_button, start_button_event_handler, LV_EVENT_CLICKED, NULL);
 
     lv_timer_create(update_time, 1000, NULL); // Update time every second
+
+    create_visualisation();
+}
+
+void create_visualisation()
+{
+
+    lv_obj_t *scr = lv_scr_act();
+
+    if (visualisation_mode_active == PROGRESS_BAR)
+    {
+        lv_visualisation_object = lv_bar_create(scr);
+        lv_obj_set_size(lv_visualisation_object, 200, 20);
+        lv_obj_align(lv_visualisation_object, LV_ALIGN_CENTER, 0, 0);
+        lv_bar_set_range(lv_visualisation_object, 0, 100);
+        lv_bar_set_value(lv_visualisation_object, 100, LV_ANIM_OFF);
+    }
+}
+
+void update_visualisation()
+{
+    if (visualisation_mode_active == PROGRESS_BAR)
+    {
+        lv_bar_set_value(lv_visualisation_object, (100 * (countdown_starttime_seconds - countdown_seconds)) / countdown_starttime_seconds, LV_ANIM_ON);
+    }
 }
 
 void button_1_pressed()

@@ -9,6 +9,7 @@
         "memory": "c",
         "ostream": "c",
         "streambuf": "c",
-        "tuple": "c"
+        "tuple": "c",
+        "lv_font_montserrat_20.c": "cpp"
     }
 }
