@@ -11,28 +11,6 @@
 #include "pin_config.h"
 
 #include <TouchDrvCSTXXX.hpp>
-#define PIN_LCD_BL 38
-#define PIN_LCD_D0 39
-#define PIN_LCD_D1 40
-#define PIN_LCD_D2 41
-#define PIN_LCD_D3 42
-#define PIN_LCD_D4 45
-#define PIN_LCD_D5 46
-#define PIN_LCD_D6 47
-#define PIN_LCD_D7 48
-#define PIN_POWER_ON 15
-#define PIN_LCD_RES 5
-#define PIN_LCD_CS 6
-#define PIN_LCD_DC 7
-#define PIN_LCD_WR 8
-#define PIN_LCD_RD 9
-#define PIN_BUTTON_1 0
-#define PIN_BUTTON_2 14
-#define PIN_BAT_VOLT 4
-#define BOARD_I2C_SCL 17
-#define BOARD_I2C_SDA 18
-#define BOARD_TOUCH_IRQ 16
-#define BOARD_TOUCH_RST 21
 
 #define HORIZONTAL_RESOLUTION 320
 #define VERTICAL_RESOLUTION 170
@@ -51,11 +29,9 @@ static bool is_initialized_lvgl = false;
 lv_obj_t *time_label;
 lv_obj_t *start_button;
 lv_obj_t *set_button;
-lv_obj_t *hour_spinbox;
-lv_obj_t *min_spinbox;
-lv_obj_t *sec_spinbox;
 
 int countdown_seconds = 10;
+int countdown_starttime_seconds;
 bool countdown_running = false;
 
 typedef struct
@@ -140,15 +116,13 @@ void update_time(lv_timer_t *timer)
 
 void start_button_event_handler(lv_event_t *e)
 {
+    countdown_starttime_seconds = countdown_seconds;
     countdown_running = true;
 }
 
 void set_button_event_handler(lv_event_t *e)
 {
-    int hours = lv_spinbox_get_value(hour_spinbox);
-    int minutes = lv_spinbox_get_value(min_spinbox);
-    int seconds = lv_spinbox_get_value(sec_spinbox);
-    countdown_seconds = (hours * 3600) + (minutes * 60) + seconds;
+    // countdown_seconds = (hours * 3600) + (minutes * 60) + seconds;
     countdown_running = false;
     update_time(NULL);
 }
@@ -163,22 +137,7 @@ void create_countdown_screen()
 
     time_label = lv_label_create(scr);
     lv_obj_align(time_label, LV_ALIGN_CENTER, 0, -20);
-
-    hour_spinbox = lv_spinbox_create(scr);
-    lv_spinbox_set_range(hour_spinbox, 0, 99);
-    lv_spinbox_set_digit_format(hour_spinbox, 2, 0);
-    lv_obj_align(hour_spinbox, LV_ALIGN_CENTER, -80, 20);
-
-    min_spinbox = lv_spinbox_create(scr);
-    lv_spinbox_set_range(min_spinbox, 0, 59);
-    lv_spinbox_set_digit_format(min_spinbox, 2, 0);
-    lv_obj_align(min_spinbox, LV_ALIGN_CENTER, 0, 20);
-
-    sec_spinbox = lv_spinbox_create(scr);
-    lv_spinbox_set_range(sec_spinbox, 0, 59);
-    lv_spinbox_set_digit_format(sec_spinbox, 2, 0);
-    lv_obj_align(sec_spinbox, LV_ALIGN_CENTER, 80, 20);
-    lv_spinbox_set_value(sec_spinbox, COUNTDOWN_DEFAULT_SECONDS);
+    // lv_obj_set_style_text_font(time_label, LV_FONT_MONTSERRAT_20, LV_STATE_DEFAULT); // Set the font size
 
     set_button = lv_btn_create(scr);
     lv_obj_align(set_button, LV_ALIGN_CENTER, -60, 60);
@@ -195,13 +154,32 @@ void create_countdown_screen()
     lv_timer_create(update_time, 1000, NULL); // Update time every second
 }
 
+void button_1_pressed()
+{
+    Serial.println("button 1 pressed");
+    countdown_seconds = countdown_seconds + 10;
+    update_time(NULL); // to update the screen
+}
+
+void button_2_pressed()
+{
+    Serial.println("button 2 pressed");
+    countdown_seconds = countdown_seconds - 10;
+    update_time(NULL); // to update the screen
+}
+
 void setup()
 {
     Serial.begin(115200);
     Serial.println("started setup()");
 
-    // ----- Display Init -----
+    // ----- Input Buttons Init -----
+    pinMode(PIN_BUTTON_1, INPUT_PULLUP);
+    pinMode(PIN_BUTTON_2, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(PIN_BUTTON_1), button_1_pressed, RISING);
+    attachInterrupt(digitalPinToInterrupt(PIN_BUTTON_2), button_2_pressed, RISING);
 
+    // ----- Display Init -----
     pinMode(PIN_POWER_ON, OUTPUT); // Turn on display power
     digitalWrite(PIN_POWER_ON, HIGH);
 
@@ -285,7 +263,6 @@ void setup()
     lv_disp_draw_buf_init(&disp_buf, lv_disp_buf, NULL, LVGL_LCD_BUF_SIZE);
     /*Initialize the display*/
     lv_disp_drv_init(&disp_drv);
-    /*Change the following line to your display UI resolution and orientation*/
     // lv_disp_set_rotation(NULL, LV_DISP_ROT_90);
     disp_drv.hor_res = HORIZONTAL_RESOLUTION;
     disp_drv.ver_res = VERTICAL_RESOLUTION;
