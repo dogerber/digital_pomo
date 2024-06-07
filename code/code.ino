@@ -37,6 +37,10 @@ static bool is_initialized_lvgl = false;
 lv_obj_t *time_label;
 lv_obj_t *start_button;
 lv_obj_t *set_button;
+lv_obj_t *popup;
+lv_obj_t *confirm_button;
+lv_obj_t *confirm_label;
+lv_obj_t *label_popup;
 
 // visualisation objects
 lv_obj_t *lv_visualisation_object;
@@ -109,22 +113,24 @@ void update_time(lv_timer_t *timer)
     if (countdown_running)
     {
         countdown_seconds--;
+        update_visualisation();
         if (countdown_seconds <= 0)
         {
             countdown_seconds = 0;
             countdown_running = false;
             lv_label_set_text(time_label, "Time's up!");
+            lv_obj_move_foreground(popup);                // Move the popup to the front
+            lv_obj_clear_flag(popup, LV_OBJ_FLAG_HIDDEN); // Show the popup when the countdown is done
             return;
         }
     }
+
     int hours = countdown_seconds / 3600;
     int minutes = (countdown_seconds % 3600) / 60;
     int seconds = countdown_seconds % 60;
     char buf[64];
     sprintf(buf, "%02d:%02d:%02d", hours, minutes, seconds);
     lv_label_set_text(time_label, buf);
-
-    update_visualisation();
 }
 
 void start_button_event_handler(lv_event_t *e)
@@ -166,6 +172,8 @@ void create_countdown_screen()
 
     lv_timer_create(update_time, 1000, NULL); // Update time every second
 
+    create_popup(); // displayed when countdown is done
+
     create_visualisation();
 }
 
@@ -184,8 +192,34 @@ void create_visualisation()
     }
 }
 
+void confirm_button_event_handler(lv_event_t *e)
+{
+    lv_obj_add_flag(popup, LV_OBJ_FLAG_HIDDEN); // Hide the popup
+}
+
+void create_popup()
+{
+    popup = lv_obj_create(lv_scr_act()); // todo use messagebox instead? https://docs.lvgl.io/7.11/widgets/msgbox.html
+    lv_obj_set_size(popup, 250, 120);
+    lv_obj_center(popup);
+
+    label_popup = lv_label_create(popup);
+    lv_label_set_text(label_popup, "Time's up!\nPlease confirm.");
+    lv_obj_align(label_popup, LV_ALIGN_TOP_MID, 0, 40);
+
+    confirm_button = lv_btn_create(popup);
+    lv_obj_align(confirm_button, LV_ALIGN_BOTTOM_MID, 0, -50);
+    confirm_label = lv_label_create(confirm_button);
+    lv_label_set_text(confirm_label, "Confirm");
+    lv_obj_add_event_cb(confirm_button, confirm_button_event_handler, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_add_flag(popup, LV_OBJ_FLAG_HIDDEN); // Hide the popup initially
+}
+
 void update_visualisation()
 {
+
+    // todo disable update if countdown is done?
     if (visualisation_mode_active == PROGRESS_BAR)
     {
         lv_bar_set_value(lv_visualisation_object, (100 * (countdown_starttime_seconds - countdown_seconds)) / countdown_starttime_seconds, LV_ANIM_ON);
