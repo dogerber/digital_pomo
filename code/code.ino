@@ -18,6 +18,8 @@
 
 #define COUNTDOWN_DEFAULT_SECONDS 12
 
+#define TIME_TO_HIDE_BUTTONS_MILLISECONDS 10 * 1000
+
 typedef enum
 {
     PROGRESS_BAR,
@@ -42,9 +44,14 @@ lv_obj_t *popup;
 lv_obj_t *confirm_button;
 lv_obj_t *confirm_label;
 lv_obj_t *label_popup;
+lv_obj_t *inc_button;
+lv_obj_t *dec_button;
 
 // styles
 static lv_style_t style_btn_norm;
+
+// timers
+lv_timer_t *idle_timer;
 
 // visualisation objects
 lv_obj_t *lv_visualisation_object;
@@ -110,10 +117,23 @@ static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data
         data->state = LV_INDEV_STATE_PR;
     }
     else
+    {
         data->state = LV_INDEV_STATE_REL;
+    }
 }
 
 // ----- Button event handlers -----
+
+static void screen_touch_event_handler(lv_event_t *e)
+{
+    reset_idle_timer();
+    // Make buttons visible again
+    lv_obj_clear_flag(set_button, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(start_button, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(inc_button, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(dec_button, LV_OBJ_FLAG_HIDDEN);
+}
+
 void start_button_event_handler(lv_event_t *e)
 {
     countdown_starttime_seconds = countdown_seconds;
@@ -215,7 +235,7 @@ void create_countdown_screen()
     lv_obj_add_event_cb(start_button, start_button_event_handler, LV_EVENT_CLICKED, NULL);
 
     // Increment Button
-    lv_obj_t *inc_button = lv_btn_create(scr);
+    inc_button = lv_btn_create(scr);
     lv_obj_remove_style_all(inc_button);
     lv_obj_add_style(inc_button, &style_btn_norm, 0);
     lv_obj_align(inc_button, LV_ALIGN_CENTER, 120, -30); // Adjust position as needed
@@ -224,13 +244,16 @@ void create_countdown_screen()
     lv_obj_add_event_cb(inc_button, inc_button_event_handler, LV_EVENT_CLICKED, NULL);
 
     // Decrement Button
-    lv_obj_t *dec_button = lv_btn_create(scr);
+    dec_button = lv_btn_create(scr);
     lv_obj_remove_style_all(dec_button);
     lv_obj_add_style(dec_button, &style_btn_norm, 0);
     lv_obj_align(dec_button, LV_ALIGN_CENTER, 120, 30); // Adjust position as needed
     lv_obj_t *dec_label = lv_label_create(dec_button);
     lv_label_set_text(dec_label, "-");
     lv_obj_add_event_cb(dec_button, dec_button_event_handler, LV_EVENT_CLICKED, NULL);
+
+    // reset_idle_timer() to keep things visible
+    lv_obj_add_event_cb(lv_scr_act(), screen_touch_event_handler, LV_EVENT_PRESSED, NULL);
 
     lv_timer_create(update_time, 1000, NULL); // Update time every second
 
@@ -250,7 +273,7 @@ void create_visualisation()
         lv_obj_set_size(lv_visualisation_object, 200, 20);
         lv_obj_align(lv_visualisation_object, LV_ALIGN_CENTER, 0, 0);
         lv_bar_set_range(lv_visualisation_object, 0, 100);
-        lv_bar_set_value(lv_visualisation_object, 100, LV_ANIM_OFF);
+        lv_bar_set_value(lv_visualisation_object, 100, LV_ANIM_ON);
     }
 }
 
@@ -282,6 +305,20 @@ void update_visualisation()
     {
         lv_bar_set_value(lv_visualisation_object, (100 * (countdown_starttime_seconds - countdown_seconds)) / countdown_starttime_seconds, LV_ANIM_ON);
     }
+}
+
+static void reset_idle_timer()
+{
+    lv_timer_reset(idle_timer);
+}
+
+static void hide_buttons(lv_timer_t *timer)
+{
+    // Assuming set_button, start_button, inc_button, and dec_button are globally accessible
+    lv_obj_add_flag(set_button, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(start_button, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(inc_button, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(dec_button, LV_OBJ_FLAG_HIDDEN);
 }
 
 void update_time(lv_timer_t *timer)
@@ -459,6 +496,8 @@ void setup()
 
     // set styles
     lv_set_button_style();
+
+    idle_timer = lv_timer_create(hide_buttons, TIME_TO_HIDE_BUTTONS_SECONDS, NULL);
 
     create_countdown_screen();
     Serial.println("Reached end of setup()");
