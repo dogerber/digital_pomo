@@ -16,7 +16,7 @@
 #define HORIZONTAL_RESOLUTION 320
 #define VERTICAL_RESOLUTION 170
 
-#define COUNTDOWN_DEFAULT_SECONDS 12
+#define COUNTDOWN_DEFAULT_SECONDS 2 * 60
 
 #define TIME_TO_HIDE_BUTTONS_MILLISECONDS 10 * 1000
 
@@ -37,8 +37,10 @@ static lv_disp_drv_t disp_drv;      // contains callback functions
 static lv_color_t *lv_disp_buf;
 static bool is_initialized_lvgl = false;
 
+lv_obj_t *label;
 lv_obj_t *time_label;
 lv_obj_t *start_button;
+lv_obj_t *start_label;
 lv_obj_t *set_button;
 lv_obj_t *popup;
 lv_obj_t *confirm_button;
@@ -56,9 +58,10 @@ lv_timer_t *idle_timer;
 // visualisation objects
 lv_obj_t *lv_visualisation_object;
 
-int countdown_seconds = 10;
+int countdown_seconds = COUNTDOWN_DEFAULT_SECONDS;
 int countdown_starttime_seconds = countdown_seconds;
 bool countdown_running = false;
+bool countdown_pause = false;
 
 // ----- Structures -----
 typedef struct
@@ -132,18 +135,40 @@ static void screen_touch_event_handler(lv_event_t *e)
     lv_obj_clear_flag(start_button, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(inc_button, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(dec_button, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(label, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(time_label, LV_OBJ_FLAG_HIDDEN);
 }
 
 void start_button_event_handler(lv_event_t *e)
 {
-    countdown_starttime_seconds = countdown_seconds;
-    countdown_running = true;
+    if ((!countdown_pause) && (!countdown_running))
+    { // start
+        countdown_starttime_seconds = countdown_seconds;
+        countdown_running = true;
+        lv_label_set_text(start_label, "Pause");
+    }
+    else if (countdown_pause)
+    { // resume
+        countdown_pause = false;
+        countdown_running = true;
+        lv_label_set_text(start_label, "Pause");
+    }
+    else
+    { // pause
+        countdown_pause = true;
+        countdown_running = false;
+        lv_label_set_text(start_label, "Resume");
+    }
 }
 
 void set_button_event_handler(lv_event_t *e)
 {
     // countdown_seconds = (hours * 3600) + (minutes * 60) + seconds;
+    countdown_seconds = countdown_starttime_seconds;
     countdown_running = false;
+    countdown_pause = false;
+    lv_bar_set_value(lv_visualisation_object, 0, LV_ANIM_ON);
+    lv_label_set_text(start_label, "Start");
     update_time(NULL);
 }
 
@@ -188,10 +213,13 @@ void lv_set_button_style(void)
     lv_style_init(&style_btn_norm);
     lv_style_set_bg_color(&style_btn_norm, (lv_color_black())); // Set background color
     lv_style_set_pad_all(&style_btn_norm, 10);
-    lv_style_set_bg_opa(&style_btn_norm, LV_OPA_COVER);             // Set background opacity
-    lv_style_set_border_width(&style_btn_norm, 2);                  // Set border width
-    lv_style_set_border_color(&style_btn_norm, (lv_color_white())); // Set border color
-    lv_style_set_radius(&style_btn_norm, 5);                        // Set corner radius for rounded corners
+    lv_style_set_bg_opa(&style_btn_norm, LV_OPA_COVER); // Set background opacity
+    if (false)
+    {
+        lv_style_set_border_width(&style_btn_norm, 2);                  // Set border width
+        lv_style_set_border_color(&style_btn_norm, (lv_color_white())); // Set border color
+    }
+    lv_style_set_radius(&style_btn_norm, 5); // Set corner radius for rounded corners
     // lv_style_set_text_color(&style_btn_norm, lv_palette_main(LV_PALETTE_WHITE));   // Set text color
 }
 
@@ -208,7 +236,7 @@ void create_countdown_screen()
     lv_obj_t *scr = lv_scr_act();
 
     // Create the label at the top of the screen
-    lv_obj_t *label = lv_label_create(scr);
+    label = lv_label_create(scr);
     lv_label_set_text(label, "Countdown Timer");
     lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
 
@@ -222,7 +250,7 @@ void create_countdown_screen()
     lv_obj_add_style(set_button, &style_btn_norm, 0);
     lv_obj_align(set_button, LV_ALIGN_CENTER, 60, 60);
     lv_obj_t *set_label = lv_label_create(set_button);
-    lv_label_set_text(set_label, "Set Time");
+    lv_label_set_text(set_label, "Reset");
     lv_obj_add_event_cb(set_button, set_button_event_handler, LV_EVENT_CLICKED, NULL);
 
     // Create the start button in the center of the screen
@@ -230,7 +258,7 @@ void create_countdown_screen()
     lv_obj_remove_style_all(start_button);
     lv_obj_add_style(start_button, &style_btn_norm, 0);
     lv_obj_align(start_button, LV_ALIGN_CENTER, -60, 60);
-    lv_obj_t *start_label = lv_label_create(start_button);
+    start_label = lv_label_create(start_button);
     lv_label_set_text(start_label, "Start");
     lv_obj_add_event_cb(start_button, start_button_event_handler, LV_EVENT_CLICKED, NULL);
 
@@ -270,10 +298,31 @@ void create_visualisation()
     if (visualisation_mode_active == PROGRESS_BAR)
     {
         lv_visualisation_object = lv_bar_create(scr);
-        lv_obj_set_size(lv_visualisation_object, 200, 20);
+
+        // styling
+        static lv_style_t style_bg;
+        static lv_style_t style_indic;
+
+        lv_style_init(&style_bg);
+        lv_style_set_border_color(&style_bg, lv_palette_main(LV_PALETTE_BLUE));
+        lv_style_set_border_width(&style_bg, 2);
+        lv_style_set_pad_all(&style_bg, 6); /*To make the indicator smaller*/
+        lv_style_set_radius(&style_bg, 6);
+
+        lv_style_init(&style_indic);
+        lv_style_set_bg_opa(&style_indic, LV_OPA_COVER);
+        lv_style_set_bg_color(&style_indic, lv_palette_main(LV_PALETTE_BLUE));
+        lv_style_set_radius(&style_indic, 3);
+
+        lv_obj_remove_style_all(lv_visualisation_object); /*To have a clean start*/
+        lv_obj_add_style(lv_visualisation_object, &style_bg, 0);
+        lv_obj_add_style(lv_visualisation_object, &style_indic, LV_PART_INDICATOR);
+
+        // placing, size, startvalue
+        lv_obj_set_size(lv_visualisation_object, 260, 20);
         lv_obj_align(lv_visualisation_object, LV_ALIGN_CENTER, 0, 0);
         lv_bar_set_range(lv_visualisation_object, 0, 100);
-        lv_bar_set_value(lv_visualisation_object, 100, LV_ANIM_ON);
+        lv_bar_set_value(lv_visualisation_object, 0, LV_ANIM_ON);
     }
 }
 
@@ -319,6 +368,8 @@ static void hide_buttons(lv_timer_t *timer)
     lv_obj_add_flag(start_button, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(inc_button, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(dec_button, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(time_label, LV_OBJ_FLAG_HIDDEN);
 }
 
 void update_time(lv_timer_t *timer)
@@ -497,7 +548,7 @@ void setup()
     // set styles
     lv_set_button_style();
 
-    idle_timer = lv_timer_create(hide_buttons, TIME_TO_HIDE_BUTTONS_SECONDS, NULL);
+    idle_timer = lv_timer_create(hide_buttons, TIME_TO_HIDE_BUTTONS_MILLISECONDS, NULL);
 
     create_countdown_screen();
     Serial.println("Reached end of setup()");
