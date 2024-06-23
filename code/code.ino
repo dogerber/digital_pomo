@@ -304,14 +304,14 @@ void create_visualisation()
         static lv_style_t style_indic;
 
         lv_style_init(&style_bg);
-        lv_style_set_border_color(&style_bg, lv_palette_main(LV_PALETTE_BLUE));
+        lv_style_set_border_color(&style_bg, lv_color_white()); // was lv_palette_main(LV_PALETTE_BLUE)
         lv_style_set_border_width(&style_bg, 2);
         lv_style_set_pad_all(&style_bg, 6); /*To make the indicator smaller*/
         lv_style_set_radius(&style_bg, 6);
 
         lv_style_init(&style_indic);
         lv_style_set_bg_opa(&style_indic, LV_OPA_COVER);
-        lv_style_set_bg_color(&style_indic, lv_palette_main(LV_PALETTE_BLUE));
+        lv_style_set_bg_color(&style_indic, lv_color_white());
         lv_style_set_radius(&style_indic, 3);
 
         lv_obj_remove_style_all(lv_visualisation_object); /*To have a clean start*/
@@ -488,6 +488,10 @@ void setup()
 
     // ----- Init LVGL -----
     lv_init();
+
+    // Set background color to light blue
+    // lv_obj_set_style_bg_color(lv_scr_act(), lv_color_make(0, 0, 0), LV_PART_MAIN);
+
     lv_disp_buf = (lv_color_t *)heap_caps_malloc(LVGL_LCD_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
     // lv_obj_clean(lv_scr_act()); // clear screen
 
