@@ -43,6 +43,9 @@ lv_obj_t *confirm_button;
 lv_obj_t *confirm_label;
 lv_obj_t *label_popup;
 
+// styles
+static lv_style_t style_btn_norm;
+
 // visualisation objects
 lv_obj_t *lv_visualisation_object;
 
@@ -158,6 +161,20 @@ void dec_button_event_handler(lv_event_t *e)
     }
 }
 
+// ----- styles -----
+
+void lv_set_button_style(void)
+{
+    lv_style_init(&style_btn_norm);
+    lv_style_set_bg_color(&style_btn_norm, (lv_color_black())); // Set background color
+    lv_style_set_pad_all(&style_btn_norm, 10);
+    lv_style_set_bg_opa(&style_btn_norm, LV_OPA_COVER);             // Set background opacity
+    lv_style_set_border_width(&style_btn_norm, 2);                  // Set border width
+    lv_style_set_border_color(&style_btn_norm, (lv_color_white())); // Set border color
+    lv_style_set_radius(&style_btn_norm, 5);                        // Set corner radius for rounded corners
+    // lv_style_set_text_color(&style_btn_norm, lv_palette_main(LV_PALETTE_WHITE));   // Set text color
+}
+
 // ----- create functions -----
 
 /**
@@ -181,7 +198,8 @@ void create_countdown_screen()
 
     // Create the set button in the center of the screen
     set_button = lv_btn_create(scr);
-    // lv_obj_add_style(set_button, &style_btn_norm, LV_STATE_DEFAULT);
+    lv_obj_remove_style_all(set_button); /*Remove the style coming from the theme*/
+    lv_obj_add_style(set_button, &style_btn_norm, 0);
     lv_obj_align(set_button, LV_ALIGN_CENTER, 60, 60);
     lv_obj_t *set_label = lv_label_create(set_button);
     lv_label_set_text(set_label, "Set Time");
@@ -189,7 +207,8 @@ void create_countdown_screen()
 
     // Create the start button in the center of the screen
     start_button = lv_btn_create(scr);
-    // lv_obj_add_style(start_button, &style_btn_norm, LV_STATE_DEFAULT);
+    lv_obj_remove_style_all(start_button);
+    lv_obj_add_style(start_button, &style_btn_norm, 0);
     lv_obj_align(start_button, LV_ALIGN_CENTER, -60, 60);
     lv_obj_t *start_label = lv_label_create(start_button);
     lv_label_set_text(start_label, "Start");
@@ -197,14 +216,18 @@ void create_countdown_screen()
 
     // Increment Button
     lv_obj_t *inc_button = lv_btn_create(scr);
-    lv_obj_align(inc_button, LV_ALIGN_CENTER, 110, -30); // Adjust position as needed
+    lv_obj_remove_style_all(inc_button);
+    lv_obj_add_style(inc_button, &style_btn_norm, 0);
+    lv_obj_align(inc_button, LV_ALIGN_CENTER, 120, -30); // Adjust position as needed
     lv_obj_t *inc_label = lv_label_create(inc_button);
     lv_label_set_text(inc_label, "+");
     lv_obj_add_event_cb(inc_button, inc_button_event_handler, LV_EVENT_CLICKED, NULL);
 
     // Decrement Button
     lv_obj_t *dec_button = lv_btn_create(scr);
-    lv_obj_align(dec_button, LV_ALIGN_CENTER, 110, 30); // Adjust position as needed
+    lv_obj_remove_style_all(dec_button);
+    lv_obj_add_style(dec_button, &style_btn_norm, 0);
+    lv_obj_align(dec_button, LV_ALIGN_CENTER, 120, 30); // Adjust position as needed
     lv_obj_t *dec_label = lv_label_create(dec_button);
     lv_label_set_text(dec_label, "-");
     lv_obj_add_event_cb(dec_button, dec_button_event_handler, LV_EVENT_CLICKED, NULL);
@@ -435,7 +458,7 @@ void setup()
     settimeofday(&now, NULL);
 
     // set styles
-    // lv_set_button_style();
+    lv_set_button_style();
 
     create_countdown_screen();
     Serial.println("Reached end of setup()");
