@@ -9,6 +9,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_vendor.h"
 #include "pin_config.h"
+// #include "lv_styles.h"
 
 #include <TouchDrvCSTXXX.hpp>
 
@@ -142,34 +143,75 @@ void button_2_pressed()
     update_time(NULL); // to update the screen
 }
 
-// ----- Screen creation functions -----
+void inc_button_event_handler(lv_event_t *e)
+{
+    countdown_seconds += 60; // Increment by 1 minute
+    update_time(NULL);       // Update the display with the new time
+}
+
+void dec_button_event_handler(lv_event_t *e)
+{
+    if (countdown_seconds > 60)
+    {                            // Prevent negative countdown time
+        countdown_seconds -= 60; // Decrement by 1 minute
+        update_time(NULL);       // Update the display with the new time
+    }
+}
+
+// ----- create functions -----
+
+/**
+ * @brief Create the countdown screen.
+ *
+ * This function creates the countdown screen, which includes a label, a time label,
+ * set and start buttons, increment and decrement buttons, and a visualisation.
+ */
 void create_countdown_screen()
 {
     lv_obj_t *scr = lv_scr_act();
 
+    // Create the label at the top of the screen
     lv_obj_t *label = lv_label_create(scr);
     lv_label_set_text(label, "Countdown Timer");
     lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
 
+    // Create the time label in the center of the screen
     time_label = lv_label_create(scr);
     lv_obj_align(time_label, LV_ALIGN_CENTER, 0, -20);
-    // broken: lv_obj_set_style_text_font(time_label, &lv_font_montserrat_18, LV_STATE_DEFAULT); // Set the font size
 
+    // Create the set button in the center of the screen
     set_button = lv_btn_create(scr);
-    lv_obj_align(set_button, LV_ALIGN_CENTER, -60, 60);
+    // lv_obj_add_style(set_button, &style_btn_norm, LV_STATE_DEFAULT);
+    lv_obj_align(set_button, LV_ALIGN_CENTER, 60, 60);
     lv_obj_t *set_label = lv_label_create(set_button);
     lv_label_set_text(set_label, "Set Time");
     lv_obj_add_event_cb(set_button, set_button_event_handler, LV_EVENT_CLICKED, NULL);
 
+    // Create the start button in the center of the screen
     start_button = lv_btn_create(scr);
-    lv_obj_align(start_button, LV_ALIGN_CENTER, 60, 60);
+    // lv_obj_add_style(start_button, &style_btn_norm, LV_STATE_DEFAULT);
+    lv_obj_align(start_button, LV_ALIGN_CENTER, -60, 60);
     lv_obj_t *start_label = lv_label_create(start_button);
     lv_label_set_text(start_label, "Start");
     lv_obj_add_event_cb(start_button, start_button_event_handler, LV_EVENT_CLICKED, NULL);
 
+    // Increment Button
+    lv_obj_t *inc_button = lv_btn_create(scr);
+    lv_obj_align(inc_button, LV_ALIGN_CENTER, 110, -30); // Adjust position as needed
+    lv_obj_t *inc_label = lv_label_create(inc_button);
+    lv_label_set_text(inc_label, "+");
+    lv_obj_add_event_cb(inc_button, inc_button_event_handler, LV_EVENT_CLICKED, NULL);
+
+    // Decrement Button
+    lv_obj_t *dec_button = lv_btn_create(scr);
+    lv_obj_align(dec_button, LV_ALIGN_CENTER, 110, 30); // Adjust position as needed
+    lv_obj_t *dec_label = lv_label_create(dec_button);
+    lv_label_set_text(dec_label, "-");
+    lv_obj_add_event_cb(dec_button, dec_button_event_handler, LV_EVENT_CLICKED, NULL);
+
     lv_timer_create(update_time, 1000, NULL); // Update time every second
 
-    create_popup(); // displayed when countdown is done
+    create_popup(); // Displayed when countdown is done
 
     create_visualisation();
 }
@@ -391,6 +433,9 @@ void setup()
     time_t t = mktime(&tm);
     struct timeval now = {.tv_sec = t};
     settimeofday(&now, NULL);
+
+    // set styles
+    // lv_set_button_style();
 
     create_countdown_screen();
     Serial.println("Reached end of setup()");
