@@ -16,7 +16,7 @@
 #define HORIZONTAL_RESOLUTION 320
 #define VERTICAL_RESOLUTION 170
 
-#define COUNTDOWN_DEFAULT_SECONDS 2 * 60
+#define COUNTDOWN_DEFAULT_SECONDS 10
 
 #define TIME_TO_HIDE_BUTTONS_MILLISECONDS 10 * 1000
 
@@ -169,12 +169,14 @@ void set_button_event_handler(lv_event_t *e)
     countdown_pause = false;
     lv_bar_set_value(lv_visualisation_object, 0, LV_ANIM_ON);
     lv_label_set_text(start_label, "Start");
+    screen_touch_event_handler(NULL); // Make buttons visible again
     update_time(NULL);
 }
 
 void confirm_button_event_handler(lv_event_t *e)
 {
     lv_obj_add_flag(popup, LV_OBJ_FLAG_HIDDEN); // Hide the popup
+    set_button_event_handler(NULL);             // Reset the countdown
 }
 
 void button_1_pressed()
@@ -194,7 +196,8 @@ void button_2_pressed()
 void inc_button_event_handler(lv_event_t *e)
 {
     countdown_seconds += 60; // Increment by 1 minute
-    update_time(NULL);       // Update the display with the new time
+    countdown_starttime_seconds += 60;
+    update_time(NULL); // Update the display with the new time
 }
 
 void dec_button_event_handler(lv_event_t *e)
@@ -202,7 +205,8 @@ void dec_button_event_handler(lv_event_t *e)
     if (countdown_seconds > 60)
     {                            // Prevent negative countdown time
         countdown_seconds -= 60; // Decrement by 1 minute
-        update_time(NULL);       // Update the display with the new time
+        countdown_starttime_seconds -= 60;
+        update_time(NULL); // Update the display with the new time
     }
 }
 
@@ -234,6 +238,8 @@ void lv_set_button_style(void)
 void create_countdown_screen()
 {
     lv_obj_t *scr = lv_scr_act();
+
+    lv_obj_set_style_bg_color(scr, lv_color_make(0, 0, 0), LV_PART_MAIN);
 
     // Create the label at the top of the screen
     label = lv_label_create(scr);
@@ -328,16 +334,23 @@ void create_visualisation()
 
 void create_popup()
 {
-    popup = lv_obj_create(lv_scr_act()); // todo use messagebox instead? https://docs.lvgl.io/7.11/widgets/msgbox.html
-    lv_obj_set_size(popup, 250, 120);
+    popup = lv_obj_create(lv_scr_act());
+
+    lv_obj_set_style_bg_color(popup, lv_color_make(0, 0, 0), LV_PART_MAIN); // black background
+    lv_obj_set_style_border_width(popup, 2, LV_PART_MAIN);                  // Set border width
+    lv_obj_set_style_border_color(popup, (lv_color_white()), LV_PART_MAIN); // Set border color
+
+    lv_obj_set_size(popup, 300, 120);
     lv_obj_center(popup);
 
     label_popup = lv_label_create(popup);
-    lv_label_set_text(label_popup, "Time's up!\nPlease confirm.");
-    lv_obj_align(label_popup, LV_ALIGN_TOP_MID, 0, 40);
+    lv_label_set_text(label_popup, "Time's up!");
+    lv_obj_align(label_popup, LV_ALIGN_TOP_MID, 0, 0);
 
     confirm_button = lv_btn_create(popup);
-    lv_obj_align(confirm_button, LV_ALIGN_BOTTOM_MID, 0, -50);
+    lv_obj_remove_style_all(confirm_button);
+    lv_obj_add_style(confirm_button, &style_btn_norm, 0);
+    lv_obj_align(confirm_button, LV_ALIGN_BOTTOM_MID, 0, 0);
     confirm_label = lv_label_create(confirm_button);
     lv_label_set_text(confirm_label, "Confirm");
     lv_obj_add_event_cb(confirm_button, confirm_button_event_handler, LV_EVENT_CLICKED, NULL);
@@ -363,13 +376,16 @@ static void reset_idle_timer()
 
 static void hide_buttons(lv_timer_t *timer)
 {
-    // Assuming set_button, start_button, inc_button, and dec_button are globally accessible
-    lv_obj_add_flag(set_button, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(start_button, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(inc_button, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(dec_button, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(time_label, LV_OBJ_FLAG_HIDDEN);
+    if (countdown_running)
+    {
+        // Assuming set_button, start_button, inc_button, and dec_button are globally accessible
+        lv_obj_add_flag(set_button, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(start_button, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(inc_button, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(dec_button, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(time_label, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 void update_time(lv_timer_t *timer)
