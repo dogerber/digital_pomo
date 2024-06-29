@@ -27,6 +27,8 @@ To Upload code the switch must be in the OFF position.
 
 - Add a small buzzer
 - add visualisation methods
+  - Color gradient over time (e.g. going from blue to green in the given time)
+- add progress indication in countdown mode
 
 ## Acknowledgement
 
