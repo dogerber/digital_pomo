@@ -1,7 +1,0 @@
-{
-    "configuration": "JTAGAdapter=default,LoopCore=1,EventsCore=1,USBMode=hwcdc,CDCOnBoot=cdc,MSCOnBoot=default,DFUOnBoot=default,UploadMode=default,PartitionScheme=app3M_fat9M_16MB,DebugLevel=none,EraseFlash=none",
-    "board": "esp32:esp32:lilygo_t_display_s3",
-    "port": "COM3",
-    "output": "../build",
-    "sketch": "code\\code.ino"
-}
