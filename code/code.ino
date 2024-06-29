@@ -16,7 +16,7 @@
 #define HORIZONTAL_RESOLUTION 320
 #define VERTICAL_RESOLUTION 170
 
-#define COUNTDOWN_DEFAULT_SECONDS 10 // todo change to 45 min
+#define COUNTDOWN_DEFAULT_SECONDS 45 * 60
 
 #define TIME_TO_HIDE_BUTTONS_MILLISECONDS 10 * 1000
 
@@ -361,8 +361,6 @@ void create_popup()
 // ----- Update functions -----
 void update_visualisation()
 {
-
-    // todo disable update if countdown is done?
     if (visualisation_mode_active == PROGRESS_BAR)
     {
         lv_bar_set_value(lv_visualisation_object, (100 * (countdown_starttime_seconds - countdown_seconds)) / countdown_starttime_seconds, LV_ANIM_ON);
